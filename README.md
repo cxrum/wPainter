@@ -5,7 +5,7 @@ Painter for wplace using openCV and PyQt5 for UI
 
 - Python 3.10 or higher
 - Windows 😭
-
+- To work with this program, you **must** use Blue Marble
 ---
 
 ## Installation & Setup
