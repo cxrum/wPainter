@@ -79,11 +79,11 @@ class PainterWorker(QThread):
     update_progress = pyqtSignal(int)
     pixels_count = pyqtSignal(int)
 
-    def __init__(self, nodes: list[PixelNode], area, max_pixels):
+    def __init__(self, nodes: list[PixelNode], area, user_max_pixels):
         super().__init__()
         self.nodes = nodes
         self.area = area
-        self.max_pixels = max_pixels
+        self.max_pixels = user_max_pixels
         self.running = True
 
     def run(self):
@@ -105,10 +105,11 @@ class PainterWorker(QThread):
                 new_node = PixelNode(node.color, new_cords)
                 filtered_nodes.append(new_node)
 
-            self.pixels_count.emit(_max_pixels)
+            self.max_pixels = min(_max_pixels, self.max_pixels)
+            self.pixels_count.emit(self.max_pixels )
 
             for node in filtered_nodes:
-                if not self.running:
+                if not self.running or pixel_counter >= self.max_pixels:
                     break
 
                 color = node.color
@@ -120,12 +121,12 @@ class PainterWorker(QThread):
 
                 while painter.has_next():
                     if not self.running or pixel_counter >= self.max_pixels:
-                        raise Exception()
+                        break
 
                     if win32api.GetAsyncKeyState(ord('R')) < 0:
                         print("Stopped!")
                         self.running = False
-                        raise Exception()
+                        break
 
                     next_point = painter.next_point()
 
