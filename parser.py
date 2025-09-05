@@ -1,3 +1,5 @@
+import statistics
+
 import cv2 as cv
 import numpy
 
@@ -8,8 +10,13 @@ from utils import Color, PixelNode, Point
 def save_image(path, img):
     cv.imwrite(str(path), img)
 
-def _is_square_fit(area, avg_area, rects_areas) -> bool:
-    return min(rects_areas) <= area <= avg_area
+def _is_square_fit(area, rects_areas, k=2) -> bool:
+    rects_areas = numpy.array(rects_areas)
+    median = numpy.median(rects_areas)
+    mad = numpy.median(numpy.abs(rects_areas - median))
+    if mad == 0:
+        return rects_areas.tolist()
+    return area in [a for a in rects_areas if abs(a - median) / mad < k]
 
 class PixelParser:
 
@@ -49,7 +56,6 @@ class PixelParser:
         if MASK:
             save_image(RESULT_PATH / f"{_color.r} {_color.g} {_color.b} mask.png", mask)
 
-        avg_area  = 0.0
         rects_areas = []
 
         for c in cnts:
@@ -60,12 +66,8 @@ class PixelParser:
 
                 if w*h not in rects_areas:
                     rects_areas.append(w*h)
-                    _sum = 0
-                    for area in rects_areas:
-                        _sum += area
-                    avg_area = _sum / len(rects_areas)
 
-                if _is_square_fit(w*h, avg_area, rects_areas):
+                if _is_square_fit(w*h, rects_areas):
                     cv.rectangle(dst, (x, y), (x + w, y + h), (0, 0, 255), 1)
                     res.append(Point(x+int(w//2), y+int(h//2)))
 
