@@ -10,7 +10,7 @@ Painter for wplace using openCV and PyQt5 for UI
 
 ## Installation & Setup
 
-1. Cone this repository
+1. Clone this repository
 
 2. Make sure Python 3.10+ is installed and added to your PATH.
 
