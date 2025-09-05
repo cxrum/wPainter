@@ -1,5 +1,4 @@
 import sys
-import time
 
 import numpy
 from PIL import ImageGrab
@@ -13,12 +12,14 @@ from painter import PainterWorker
 from parser import PixelParser
 from utils import Area
 
-outline_width = 16
-outline_color = Qt.red
+OUTLINE_WIDTH = 16
+OUTLINE_COLOR = Qt.red
+
+SCREEN_BORDER_MARGIN = 200
 
 doc = """
 
-R -- stop drawing
+R -- Stop drawing
 """
 
 def screenshot():
@@ -44,16 +45,16 @@ class ColorIcon(QWidget):
 class GameOverlay(QWidget):
 
     def _min_width(self):
-        return 200
+        return SCREEN_BORDER_MARGIN
 
     def _max_width(self):
-        return self.width() - 200
+        return self.width() - SCREEN_BORDER_MARGIN
 
     def _min_height(self):
-        return 200
+        return SCREEN_BORDER_MARGIN
 
     def _max_height(self):
-        return self.height() - 200
+        return self.height() - SCREEN_BORDER_MARGIN
 
     def __init__(self):
         super().__init__()
@@ -67,9 +68,8 @@ class GameOverlay(QWidget):
         screen_width = screen_geometry.width()
         screen_height = screen_geometry.height()
 
-        self.setGeometry(0, 0, screen_width, screen_height)  # Set the overlay size to match the screen
+        self.setGeometry(0, 0, screen_width, screen_height)
 
-        # ---- Slider container ----
         self.w_slider_value = self._min_width()
         self.h_slider_value = self._min_height()
 
@@ -199,7 +199,7 @@ class GameOverlay(QWidget):
         center_x = self.width() // 2
         center_y = self.height() // 2
 
-        painter.setPen(QColor(outline_color))
+        painter.setPen(QColor(OUTLINE_COLOR))
         painter.setBrush(QBrush(QColor(0, 0, 0, 0)))
         painter.drawRect (center_x - self.w_slider_value // 2, center_y - self.h_slider_value // 2,
                             self.w_slider_value, self.h_slider_value)

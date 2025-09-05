@@ -1,6 +1,5 @@
 import numpy as np
 
-
 class Point:
     def __init__(self, x: int, y: int):
         self.x = x
@@ -34,8 +33,5 @@ class Area:
         self.left_y = left_y
 
     def is_entry(self, x, y) -> bool:
-        res = (self.left_x <= x <= self.left_x + self.width) and \
+        return (self.left_x <= x <= self.left_x + self.width) and \
             (self.left_y <= y <= self.left_y + self.height)
-
-
-        return res

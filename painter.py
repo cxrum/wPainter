@@ -74,7 +74,7 @@ class Painter:
         win32api.mouse_event(win32con.MOUSEEVENTF_RIGHTUP, x, y, 0, 0)
 
 class PainterWorker(QThread):
-    update_color = pyqtSignal(object)  # signal to update color
+    update_color = pyqtSignal(object)
     finished = pyqtSignal()
     update_progress = pyqtSignal(int)
     pixels_count = pyqtSignal(int)
@@ -123,8 +123,7 @@ class PainterWorker(QThread):
                     if not self.running or pixel_counter >= self.max_pixels:
                         break
 
-                    if win32api.GetAsyncKeyState(ord('R')) < 0:
-                        print("Stopped!")
+                    if keyboard.is_pressed('r'):
                         self.running = False
                         break
 

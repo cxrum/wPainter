@@ -1,12 +1,7 @@
-import time
-
-import numpy
 import cv2 as cv
-import numpy as np
-from PIL import ImageGrab
+import numpy
 
 from main import MASK, RESULT_PATH, DETECTED_RECTS
-from painter import Painter
 from utils import Color, PixelNode, Point
 
 
@@ -73,8 +68,6 @@ class PixelParser:
                 if _is_square_fit(w*h, avg_area, rects_areas):
                     cv.rectangle(dst, (x, y), (x + w, y + h), (0, 0, 255), 1)
                     res.append(Point(x+int(w//2), y+int(h//2)))
-
-        print(rects_areas)
 
         if DETECTED_RECTS:
             save_image(RESULT_PATH / f"{_color.r} {_color.g} {_color.b} res.png", dst)

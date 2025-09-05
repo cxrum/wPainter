@@ -3,7 +3,6 @@ import pathlib
 from utils import Color
 
 RESULT_PATH = pathlib.Path(__file__).parent / 'res'
-EX_FILE_PATH = pathlib.Path(__file__).parent / "example1.png"
 MASK = True
 DETECTED_RECTS = True
 
