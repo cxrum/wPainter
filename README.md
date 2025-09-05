@@ -3,8 +3,8 @@ Painter for wplace using openCV and PyQt5 for UI
 
 ## Requirements
 
-Python 3.10 or higher
-Windows 😭
+- Python 3.10 or higher
+- Windows 😭
 
 ---
 
