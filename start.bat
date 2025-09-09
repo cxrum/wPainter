@@ -4,15 +4,15 @@ SETLOCAL
 REM -----------------------------
 REM Check if virtual environment exists
 REM -----------------------------
-IF NOT EXIST "venv" (
+IF NOT EXIST ".venv" (
     echo Creating virtual environment...
     python -m venv venv
-    call venv\Scripts\activate
+    call .venv\Scripts\activate
     echo Installing dependencies...
     pip install --upgrade pip
     pip install -r requirements.txt
 ) ELSE (
-    call venv\Scripts\activate
+    call .venv\Scripts\activate
 )
 
 REM -----------------------------

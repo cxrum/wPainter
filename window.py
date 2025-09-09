@@ -10,7 +10,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QSlider, QVBoxLayout, QFrame,
 from main import COLOR_LIST
 from painter import PainterWorker
 from parser import PixelParser
-from utils import Area
+from utils import Area, PixelNode
 
 OUTLINE_WIDTH = 16
 OUTLINE_COLOR = Qt.red
@@ -58,6 +58,7 @@ class GameOverlay(QWidget):
 
     def __init__(self):
         super().__init__()
+
 
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
         self.setAttribute(Qt.WA_TranslucentBackground)
@@ -110,10 +111,10 @@ class GameOverlay(QWidget):
                         font-size: 14px;
                     }
                     QPushButton:hover {
-                        background-color: #2980b9;   /* Darker blue when hovered */
+                        background-color: #2980b9;
                     }
                     QPushButton:pressed {
-                        background-color: #1c5985;   /* Even darker blue when pressed */
+                        background-color: #1c5985;
                     }
                 """)
 
@@ -180,13 +181,35 @@ class GameOverlay(QWidget):
         container_y = screen_height - self.slider_container.width() - 100
         self.slider_container.move(container_x, container_y)
 
+
+        self.matrix: list[list] = []
+        self.xs: list[int] = []
+        self.ys: list[int] = []
+        self.nodes: list[PixelNode] = []
+
+        self.area = None
+        self.update_area()
+
+        self.cnt = 0
+
+    def update_area(self):
+        center_x = self.width() // 2
+        center_y = self.height() // 2
+
+        left_x = center_x - self.w_slider_value // 2
+        left_y = center_y - self.h_slider_value // 2
+
+        self.area = Area(self.w_slider_value, self.h_slider_value, left_x, left_y)
+
     def update_w_slider_value(self, value):
         self.w_slider_value = value
         self.wlabel.setText(f"Rect width: {self.w_slider_value}")
+        self.update_area()
 
     def update_h_slider_value(self, value):
         self.h_slider_value = value
         self.hlabel.setText(f"Rect height: {self.h_slider_value}")
+        self.update_area()
 
 
     def paintEvent(self, event):
@@ -201,27 +224,92 @@ class GameOverlay(QWidget):
 
         painter.setPen(QColor(OUTLINE_COLOR))
         painter.setBrush(QBrush(QColor(0, 0, 0, 0)))
-        painter.drawRect (center_x - self.w_slider_value // 2, center_y - self.h_slider_value // 2,
-                            self.w_slider_value, self.h_slider_value)
+        painter.drawRect(center_x - self.w_slider_value // 2, center_y - self.h_slider_value // 2,
+                         self.w_slider_value, self.h_slider_value)
+
+        if self.matrix:
+            self.display_rects(painter, self.matrix, self.xs, self.ys, self.area)
+
+    def build_matrix(self, nodes: list[PixelNode], tolerance: int = 5):
+        arr = []
+        for node in nodes:
+            for point in node.xy:
+                arr.append((point.x, point.y, node.color))
+
+        if not arr:
+            return [], [], []
+
+        def cluster(values):
+            values = sorted(values)
+            if not values:
+                return []
+            groups = []
+            current = [values[0]]
+            for v in values[1:]:
+                if abs(v - current[-1]) <= tolerance:
+                    current.append(v)
+                else:
+                    groups.append(round(sum(current) / len(current)))
+                    current = [v]
+            groups.append(round(sum(current) / len(current)))
+            return groups
+
+        xs = cluster([x for x, y, c in arr])
+        ys = cluster([y for x, y, c in arr])
+
+        matrix = [[None for _ in xs] for _ in ys]
+
+        for x, y, color in arr:
+            xi = min(range(len(xs)), key=lambda i: abs(xs[i] - x))
+            yi = min(range(len(ys)), key=lambda i: abs(ys[i] - y))
+            matrix[yi][xi] = color
+
+        return matrix, xs, ys
+
+    def display_rects(self, painter: QPainter, matrix: list[list], xs: list[int], ys: list[int],
+                      area: Area | None = None):
+        painter.setPen(QColor(OUTLINE_COLOR))
+        painter.setBrush(QBrush(Qt.red))
+
+        size = 1
+        max_pixels = int(self.input_pixel_count.text())
+        drawn = 0
+
+        for yi, row in enumerate(matrix):
+            y = ys[yi]
+            for xi, color in enumerate(row):
+                if color is None:
+                    continue
+                x = xs[xi]
+
+                if area is not None and not area.is_entry(x, y):
+                    continue
+
+                if isinstance(color, QColor):
+                    painter.setBrush(QBrush(color))
+                else:
+                    painter.setBrush(QBrush(Qt.red))
+
+                painter.drawRect(x - size // 2, y - size // 2, size, size)
+
+                drawn += 1
+                if drawn >= max_pixels:
+                    return
 
     def start_painter(self):
         img = screenshot()
         open_cv_image = numpy.array(img)
         parser = PixelParser(open_cv_image)
-        nodes = parser.nodes_for_colors(colors=COLOR_LIST)
+        _nodes = parser.nodes_for_colors(colors=COLOR_LIST)
 
-        center_x = self.width() // 2
-        center_y = self.height() // 2
-        left_x = center_x - self.w_slider_value // 2
-        left_y = center_y - self.h_slider_value // 2
-        area = Area(self.w_slider_value, self.h_slider_value, left_x, left_y)
-
-        node_pixels = 0
-        for node in nodes:
-            node_pixels += len(node.xy)
+        matrix, xs, ys = self.build_matrix(_nodes)
+        self.nodes = _nodes
+        self.matrix = matrix
+        self.xs = xs
+        self.ys = ys
+        self.update()
 
         max_pixels = int(self.input_pixel_count.text())
-
         self.worker = PainterWorker(nodes, area, max_pixels)
         self.worker.update_color.connect(self.color_icon.set_color)
         self.worker.update_progress.connect(self.progress.setValue)

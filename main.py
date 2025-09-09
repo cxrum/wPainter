@@ -7,6 +7,7 @@ MASK = True
 DETECTED_RECTS = True
 
 COLOR_LIST = [
+    Color(210, 210, 210),
     Color(0,0,0),
     Color(60,60,60),
     Color(120,120,120),

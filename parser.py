@@ -10,13 +10,8 @@ from utils import Color, PixelNode, Point
 def save_image(path, img):
     cv.imwrite(str(path), img)
 
-def _is_square_fit(area, rects_areas, k=2) -> bool:
-    rects_areas = numpy.array(rects_areas)
-    median = numpy.median(rects_areas)
-    mad = numpy.median(numpy.abs(rects_areas - median))
-    if mad == 0:
-        return rects_areas.tolist()
-    return area in [a for a in rects_areas if abs(a - median) / mad < k]
+def _is_square_fit(area, rects_areas, k=0.8) -> bool:
+    return True
 
 class PixelParser:
 
@@ -32,7 +27,7 @@ class PixelParser:
 
         return res
 
-    def points_for_color(self, _color: Color, tolerance = 15) -> list[Point]:
+    def points_for_color(self, _color: Color, tolerance = 0) -> list[Point]:
         res: list[Point] = []
 
         dst = cv.cvtColor(self.img, cv.COLOR_RGB2BGR)
@@ -67,9 +62,18 @@ class PixelParser:
                 if w*h not in rects_areas:
                     rects_areas.append(w*h)
 
+        for c in cnts:
+            peri = cv.arcLength(c, True)
+            approx = cv.approxPolyDP(c, 0.15 * peri, True)
+            if len(approx) == 4:
+                x, y, w, h = cv.boundingRect(approx)
+
                 if _is_square_fit(w*h, rects_areas):
                     cv.rectangle(dst, (x, y), (x + w, y + h), (0, 0, 255), 1)
                     res.append(Point(x+int(w//2), y+int(h//2)))
+                    print(w*h)
+
+
 
         if DETECTED_RECTS:
             save_image(RESULT_PATH / f"{_color.r} {_color.g} {_color.b} res.png", dst)
