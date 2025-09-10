@@ -3,16 +3,15 @@ import sys
 import numpy
 from PIL import ImageGrab
 from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtGui import QPainter, QBrush, QColor, QIntValidator
+from PyQt5.QtGui import QPainter, QBrush, QColor, QIntValidator, QPen
 from PyQt5.QtWidgets import QApplication, QWidget, QSlider, QVBoxLayout, QFrame, QLabel, QPushButton, \
     QLineEdit, QProgressBar, QHBoxLayout
 
 from main import COLOR_LIST
 from painter import PainterWorker
 from parser import PixelParser
-from utils import Area, PixelNode
+from utils import Area, PixelNode, ColorPixel
 
-OUTLINE_WIDTH = 16
 OUTLINE_COLOR = Qt.red
 
 SCREEN_BORDER_MARGIN = 200
@@ -100,7 +99,7 @@ class GameOverlay(QWidget):
         self.documentation = QLabel(doc, self.slider_container)
         self.documentation.setStyleSheet("color: black; font-size: 14px;")
 
-        self.start_button = QPushButton("Start paint",self)
+        self.start_button = QPushButton("Paint",self)
         self.start_button.clicked.connect(self.start_painter)
         self.start_button.setStyleSheet("""
                     QPushButton {
@@ -118,9 +117,27 @@ class GameOverlay(QWidget):
                     }
                 """)
 
+        self.analyze_button = QPushButton("Analyze",self)
+        self.analyze_button.clicked.connect(self.analyze)
+        self.analyze_button.setStyleSheet("""
+                    QPushButton {
+                        background-color: #3498db;   /* Blue background */
+                        color: white;                /* White text */
+                        border-radius: 10px;         /* Rounded corners */
+                        padding: 8px 16px;           /* Inner padding */
+                        font-size: 14px;
+                    }
+                    QPushButton:hover {
+                        background-color: #2980b9;
+                    }
+                    QPushButton:pressed {
+                        background-color: #1c5985;
+                    }
+                """)
+
         self.input_pixel_count = QLineEdit(self)
-        self.input_pixel_count.setValidator(QIntValidator(0, 9999, self))
-        self.input_pixel_count.setText("123")
+        self.input_pixel_count.setValidator(QIntValidator(1, 9999, self))
+        self.input_pixel_count.setText("1")
         self.input_pixel_count.setStyleSheet("""
                     QLineEdit {
                         border: 2px solid #3498db;
@@ -134,8 +151,13 @@ class GameOverlay(QWidget):
         self.pixel_amount_label = QLabel("Amount of available pixels:", self.slider_container)
         self.pixel_amount_label.setStyleSheet("color: black; font-size: 14px;")
 
+
         self.progress_label = QLabel("Progres", self.slider_container)
         self.progress_label.setStyleSheet("color: black; font-size: 14px;")
+
+        self.max_pixels_label = QLabel("0", self.slider_container)
+        self.max_pixels_label.setStyleSheet("color: black; font-size: 14px;")
+
 
         self.progress = QProgressBar(self)
         self.progress.setMinimum(0)
@@ -163,9 +185,11 @@ class GameOverlay(QWidget):
 
         layout.addWidget(self.hlabel)
         layout.addWidget(self.height_slider)
+        layout.addWidget(self.analyze_button)
 
         layout.addWidget(self.progress_label)
         layout.addWidget(self.progress)
+        layout.addWidget(self.max_pixels_label)
         layout.addLayout(current_color_layout)
 
         layout.addWidget(self.start_button)
@@ -178,18 +202,16 @@ class GameOverlay(QWidget):
         self.show()
 
         container_x = screen_width - self.slider_container.width() - 60
-        container_y = screen_height - self.slider_container.width() - 100
+        container_y = screen_height - self.slider_container.height() - 100
         self.slider_container.move(container_x, container_y)
 
 
-        self.matrix: list[list] = []
-        self.xs: list[int] = []
-        self.ys: list[int] = []
+        self.pixels: list[ColorPixel] = []
         self.nodes: list[PixelNode] = []
 
         self.area = None
         self.update_area()
-
+        self.total_pixels = 0
         self.cnt = 0
 
     def update_area(self):
@@ -227,99 +249,66 @@ class GameOverlay(QWidget):
         painter.drawRect(center_x - self.w_slider_value // 2, center_y - self.h_slider_value // 2,
                          self.w_slider_value, self.h_slider_value)
 
-        if self.matrix:
-            self.display_rects(painter, self.matrix, self.xs, self.ys, self.area)
+        if self.pixels:
+            self.display_rects(painter, self.pixels, self.area)
 
-    def build_matrix(self, nodes: list[PixelNode], tolerance: int = 5):
-        arr = []
-        for node in nodes:
-            for point in node.xy:
-                arr.append((point.x, point.y, node.color))
 
-        if not arr:
-            return [], [], []
+    def display_rects(self, painter: QPainter, pixels: list[ColorPixel], area: Area = None):
+        painter.setPen(QPen(Qt.red, 0.5, Qt.DashLine))
 
-        def cluster(values):
-            values = sorted(values)
-            if not values:
-                return []
-            groups = []
-            current = [values[0]]
-            for v in values[1:]:
-                if abs(v - current[-1]) <= tolerance:
-                    current.append(v)
-                else:
-                    groups.append(round(sum(current) / len(current)))
-                    current = [v]
-            groups.append(round(sum(current) / len(current)))
-            return groups
-
-        xs = cluster([x for x, y, c in arr])
-        ys = cluster([y for x, y, c in arr])
-
-        matrix = [[None for _ in xs] for _ in ys]
-
-        for x, y, color in arr:
-            xi = min(range(len(xs)), key=lambda i: abs(xs[i] - x))
-            yi = min(range(len(ys)), key=lambda i: abs(ys[i] - y))
-            matrix[yi][xi] = color
-
-        return matrix, xs, ys
-
-    def display_rects(self, painter: QPainter, matrix: list[list], xs: list[int], ys: list[int],
-                      area: Area | None = None):
-        painter.setPen(QColor(OUTLINE_COLOR))
-        painter.setBrush(QBrush(Qt.red))
-
-        size = 1
         max_pixels = int(self.input_pixel_count.text())
         drawn = 0
 
-        for yi, row in enumerate(matrix):
-            y = ys[yi]
-            for xi, color in enumerate(row):
-                if color is None:
-                    continue
-                x = xs[xi]
+        for pixel in pixels:
+            x = pixel.point.x
+            y = pixel.point.y
 
-                if area is not None and not area.is_entry(x, y):
-                    continue
+            if area is not None and not area.is_entry(x, y):
+                continue
 
-                if isinstance(color, QColor):
-                    painter.setBrush(QBrush(color))
-                else:
-                    painter.setBrush(QBrush(Qt.red))
+            w = pixel.width
+            h = pixel.height
 
-                painter.drawRect(x - size // 2, y - size // 2, size, size)
+            w = w + w // 2
+            h = h + h // 2
 
-                drawn += 1
-                if drawn >= max_pixels:
-                    return
+            painter.drawRect(x - w // 2, y - h // 2, w, h)
+
+            drawn += 1
+            if drawn >= max_pixels:
+                return
 
     def start_painter(self):
-        img = screenshot()
-        open_cv_image = numpy.array(img)
-        parser = PixelParser(open_cv_image)
-        _nodes = parser.nodes_for_colors(colors=COLOR_LIST)
+        self.analyze()
 
-        matrix, xs, ys = self.build_matrix(_nodes)
-        self.nodes = _nodes
-        self.matrix = matrix
-        self.xs = xs
-        self.ys = ys
-        self.update()
-
-        max_pixels = int(self.input_pixel_count.text())
-        self.worker = PainterWorker(nodes, area, max_pixels)
+        self.worker = PainterWorker(self.pixels, self.total_pixels, self.area)
         self.worker.update_color.connect(self.color_icon.set_color)
-        self.worker.update_progress.connect(self.progress.setValue)
-        self.worker.pixels_count.connect(self.set_progress_maximum)
+        self.worker.update_progress.connect(self.update_progress_value)
 
         self.worker.start()
 
+    def update_progress_value(self, current):
+        self.progress.setValue(current)
+        self.max_pixels_label.setText(f"{current} / {self.total_pixels}")
+
     def set_progress_maximum(self, value):
-        max_pixels = int(self.input_pixel_count.text())
-        self.progress.setMaximum(min(max_pixels, value))
+        self.total_pixels = value
+        self.progress.setMaximum(self.total_pixels)
+        self.max_pixels_label.setText(f"0 / {self.total_pixels}")
+
+    def analyze(self):
+        img = screenshot()
+        open_cv_image = numpy.array(img)
+        parser = PixelParser(open_cv_image, self.area)
+        _pixels = parser.matrix_points_parse(COLOR_LIST)
+        value = int(self.input_pixel_count.text())
+        _min = min(len(_pixels), value)
+
+        self.set_progress_maximum(_min)
+
+        self.pixels = _pixels
+        self.update()
+
 
 def main():
     app = QApplication(sys.argv)
