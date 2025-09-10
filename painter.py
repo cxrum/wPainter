@@ -82,7 +82,7 @@ class PainterWorker(QThread):
                         take_color = True
 
                     painter.draw_point(pixel.point, take_color)
-                    time.sleep(0.05)
+                    time.sleep(0.1)
 
                     pixel_counter += 1
                     self.update_progress.emit(pixel_counter)
