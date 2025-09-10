@@ -10,10 +10,19 @@ from utils import Color, PixelNode, Point, ColorPixel, Rect, Area
 def save_image(path, img):
     cv.imwrite(str(path), img)
 
-def _is_square_fit(area, rects_areas, k=0.5) -> bool:
-    avg = statistics.mean(rects_areas)
-    _max = avg * (1 - k)
-    return min(rects_areas) <= area <= _max
+
+def _is_square_fit(area, rects_areas, k=0.4) -> bool:
+    if not rects_areas:
+        return False
+
+    median = statistics.median(rects_areas)
+    mad = statistics.median([abs(x - median) for x in rects_areas])
+    if mad > median * 0.3:
+        return True
+    _min = median * (1 - k)
+    _max = median * (1 + k)
+
+    return _min <= area <= _max
 
 class PixelParser:
 
@@ -30,8 +39,7 @@ class PixelParser:
             rects = self.parse_points_for_color(_color, rect_checking=False)
             for rect in rects:
                 area = rect.w * rect.h
-                if area not in self.rects_areas:
-                    self.rects_areas.append(area)
+                self.rects_areas.append(area)
 
         self.rects_areas.sort()
 
@@ -50,7 +58,7 @@ class PixelParser:
 
 
 
-    def parse_points_for_color(self, _color: Color, tolerance = 0, rect_checking = True) -> list[Rect]:
+    def parse_points_for_color(self, _color: Color, tolerance = 5, rect_checking = True) -> list[Rect]:
         res: list[Rect] = []
 
         dst = cv.cvtColor(self.img, cv.COLOR_RGB2BGR)
