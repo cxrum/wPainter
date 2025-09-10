@@ -34,7 +34,6 @@ class PixelParser:
                     self.rects_areas.append(area)
 
         self.rects_areas.sort()
-        print(self.rects_areas)
 
         for _color in colors:
             rects = self.parse_points_for_color(_color)
