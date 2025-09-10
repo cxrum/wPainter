@@ -300,7 +300,7 @@ class GameOverlay(QWidget):
         img = screenshot()
         open_cv_image = numpy.array(img)
         parser = PixelParser(open_cv_image, self.area)
-        _pixels = parser.matrix_points_parse(COLOR_LIST)
+        _pixels = parser.matrix_points_parse(COLOR_LIST, True)
         value = int(self.input_pixel_count.text())
         _min = min(len(_pixels), value)
 

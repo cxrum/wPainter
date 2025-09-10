@@ -3,8 +3,8 @@ import pathlib
 from utils import Color
 
 RESULT_PATH = pathlib.Path(__file__).parent / 'res'
-MASK = True
-DETECTED_RECTS = True
+MASK = False
+DETECTED_RECTS = False
 
 COLOR_LIST = [
     Color(210, 210, 210),
