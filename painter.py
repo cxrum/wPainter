@@ -20,7 +20,7 @@ class Painter:
     def draw_point(self, point: Point, take_color):
         if take_color:
             self.take_color(point.x, point.y)
-            time.sleep(0.1)
+            time.sleep(0.5)
         self._lk_click(point.x, point.y)
 
 
@@ -33,9 +33,9 @@ class Painter:
 
     def _i_hotkey(self, x, y):
         win32api.SetCursorPos((x, y))
-        time.sleep(0.2)
+        time.sleep(0.5)
         keyboard.send('i')
-        time.sleep(0.2)
+        time.sleep(0.5)
         keyboard.send('i')
 
     def _lk_click(self, x, y):
@@ -82,7 +82,7 @@ class PainterWorker(QThread):
                         take_color = True
 
                     painter.draw_point(pixel.point, take_color)
-                    time.sleep(0.005)
+                    time.sleep(0.05)
 
                     pixel_counter += 1
                     self.update_progress.emit(pixel_counter)
