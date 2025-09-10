@@ -23,7 +23,7 @@ class PixelParser:
         self.area = area
 
 
-    def matrix_points_parse(self, colors: list[Color]) -> list[ColorPixel]:
+    def matrix_points_parse(self, colors: list[Color], sort_by_color = False) -> list[ColorPixel]:
         all_pixels: list[ColorPixel] = []
 
         for _color in colors:
@@ -43,6 +43,9 @@ class PixelParser:
                 all_pixels.append(ColorPixel(_color, Point(rect.x, rect.y), rect.w, rect.h))
 
             all_pixels.sort(key=lambda px: (px.point.y, px.point.x))
+
+        if sort_by_color:
+            all_pixels.sort(key=lambda px: (px.color.r, px.color.g, px.color.b))
 
         return all_pixels
 
