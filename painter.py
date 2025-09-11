@@ -17,6 +17,9 @@ def rgb2bgr(rgb):
     return np.array([b, g, r])
 
 class Painter:
+    def __init__(self, delay = 0.2):
+        self.delay = delay
+
     def draw_point(self, point: Point, take_color):
         if take_color:
             self.take_color(point.x, point.y)
@@ -25,17 +28,18 @@ class Painter:
 
 
     def take_color(self, x, y):
+        _l = max(0.2, self.delay)
         self._rk_click(x, y)
         self._i_hotkey(x,y)
-        time.sleep(0.2)
+        time.sleep(_l)
         self._lk_click(x,y)
-        time.sleep(0.2)
+        time.sleep(_l)
 
     def _i_hotkey(self, x, y):
         win32api.SetCursorPos((x, y))
-        time.sleep(0.5)
+        time.sleep(self.delay + 0.2)
         keyboard.send('i')
-        time.sleep(0.5)
+        time.sleep(self.delay + 0.2)
         keyboard.send('i')
 
     def _lk_click(self, x, y):
@@ -54,16 +58,18 @@ class PainterWorker(QThread):
     finished = pyqtSignal()
     update_progress = pyqtSignal(int)
 
-    def __init__(self, pixels: list[ColorPixel], total_pixels, area):
+    def __init__(self, pixels: list[ColorPixel], total_pixels, area, delay = 0.05):
         super().__init__()
         self.pixels = pixels
         self.area = area
         self.total_pixels = total_pixels
         self.running = True
+        self.delay = delay
 
     def run(self):
         pixel_counter = 0
-        painter = Painter()
+        painter = Painter(self.delay)
+
         try:
             _prev_color = None
 
@@ -82,7 +88,7 @@ class PainterWorker(QThread):
                         take_color = True
 
                     painter.draw_point(pixel.point, take_color)
-                    time.sleep(0.1)
+                    time.sleep(self.delay)
 
                     pixel_counter += 1
                     self.update_progress.emit(pixel_counter)

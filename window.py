@@ -148,22 +148,15 @@ class GameOverlay(QWidget):
                 """)
 
 
-        self.pixel_amount_label = QLabel("Amount of available pixels:", self.slider_container)
-        self.pixel_amount_label.setStyleSheet("color: black; font-size: 14px;")
+        self.pixel_amount_label = QLabel("Amount of pixels:", self.slider_container)
+        self.pixel_amount_label.setStyleSheet("color: black; font-size: 16px;")
 
 
-        self.progress_label = QLabel("Progres", self.slider_container)
-        self.progress_label.setStyleSheet("color: black; font-size: 14px;")
+        self.progress_label = QLabel("Progress:", self.slider_container)
+        self.progress_label.setStyleSheet("color: black; font-size: 16px;")
 
-        self.max_pixels_label = QLabel("0", self.slider_container)
+        self.max_pixels_label = QLabel("0/0", self.slider_container)
         self.max_pixels_label.setStyleSheet("color: black; font-size: 14px;")
-
-
-        self.progress = QProgressBar(self)
-        self.progress.setMinimum(0)
-        self.progress.setMaximum(100)
-        self.progress.setValue(0)
-        self.progress.setStyleSheet("color: black; font-size: 14px;")
 
         current_color_layout = QHBoxLayout()
 
@@ -177,34 +170,51 @@ class GameOverlay(QWidget):
 
         current_color_layout.setAlignment(Qt.AlignLeft)
 
+        self.delay=0
 
-        layout.addWidget(self.progress)
+        self.delay_slider = QSlider(Qt.Horizontal)
+        self.delay_slider.setRange(1, 50)
+        self.delay_slider.setValue(1)
+        self.delay_slider.valueChanged.connect(self.set_latency)
+
+        latency_layout = QHBoxLayout()
+
+        self.delay_label = QLabel("Drawing delay:", self.slider_container)
+        self.delay_label.setStyleSheet("color: black; font-size: 14px;")
+
+        self.latency_value_label = QLabel(str(self.delay), self.slider_container)
+        self.latency_value_label.setStyleSheet("color: black; font-size: 14px;")
+
+        latency_layout.setAlignment(Qt.AlignLeft)
+
+        latency_layout.addWidget(self.latency_value_label)
+        latency_layout.addWidget(self.delay_label)
 
         layout.addWidget(self.wlabel)
         layout.addWidget(self.width_slider)
 
         layout.addWidget(self.hlabel)
         layout.addWidget(self.height_slider)
-        layout.addWidget(self.analyze_button)
-
-        layout.addWidget(self.progress_label)
-        layout.addWidget(self.progress)
-        layout.addWidget(self.max_pixels_label)
-        layout.addLayout(current_color_layout)
-
-        layout.addWidget(self.start_button)
 
         layout.addWidget(self.pixel_amount_label)
         layout.addWidget(self.input_pixel_count)
+
+        layout.addWidget(self.analyze_button)
+        layout.addWidget(self.delay_slider)
+        layout.addLayout(latency_layout)
+        layout.addWidget(self.start_button)
+
+        layout.addWidget(self.progress_label)
+        layout.addWidget(self.max_pixels_label)
+        layout.addLayout(current_color_layout)
 
         layout.addWidget(self.documentation)
 
         self.show()
 
         container_x = screen_width - self.slider_container.width() - 60
-        container_y = screen_height - self.slider_container.height() - 100
+        container_y = screen_height - self.slider_container.height() - 60
         self.slider_container.move(container_x, container_y)
-
 
         self.pixels: list[ColorPixel] = []
         self.nodes: list[PixelNode] = []
@@ -213,6 +223,8 @@ class GameOverlay(QWidget):
         self.update_area()
         self.total_pixels = 0
         self.cnt = 0
+
+        self.set_latency(1)
 
     def update_area(self):
         center_x = self.width() // 2
@@ -233,6 +245,9 @@ class GameOverlay(QWidget):
         self.hlabel.setText(f"Rect height: {self.h_slider_value}")
         self.update_area()
 
+    def set_latency(self, latency):
+        self.delay = latency / 100
+        self.latency_value_label.setText(str(self.delay))
 
     def paintEvent(self, event):
         painter = QPainter(self)
@@ -252,11 +267,17 @@ class GameOverlay(QWidget):
         if self.pixels:
             self.display_rects(painter, self.pixels, self.area)
 
+    def get_pixels_amount(self)->int:
+        try:
+            max_pixels = int(self.input_pixel_count.text())
+            return max_pixels
+        except Exception as e:
+            return 0
+
 
     def display_rects(self, painter: QPainter, pixels: list[ColorPixel], area: Area = None):
         painter.setPen(QPen(Qt.red, 0.5, Qt.DashLine))
-
-        max_pixels = int(self.input_pixel_count.text())
+        max_pixels = self.get_pixels_amount()
         drawn = 0
 
         for pixel in pixels:
@@ -281,19 +302,17 @@ class GameOverlay(QWidget):
     def start_painter(self):
         self.analyze()
 
-        self.worker = PainterWorker(self.pixels, self.total_pixels, self.area)
+        self.worker = PainterWorker(self.pixels, self.total_pixels, self.area, self.delay)
         self.worker.update_color.connect(self.color_icon.set_color)
         self.worker.update_progress.connect(self.update_progress_value)
 
         self.worker.start()
 
     def update_progress_value(self, current):
-        self.progress.setValue(current)
         self.max_pixels_label.setText(f"{current} / {self.total_pixels}")
 
     def set_progress_maximum(self, value):
         self.total_pixels = value
-        self.progress.setMaximum(self.total_pixels)
         self.max_pixels_label.setText(f"0 / {self.total_pixels}")
 
     def analyze(self):
@@ -301,7 +320,7 @@ class GameOverlay(QWidget):
         open_cv_image = numpy.array(img)
         parser = PixelParser(open_cv_image, self.area)
         _pixels = parser.matrix_points_parse(COLOR_LIST, True)
-        value = int(self.input_pixel_count.text())
+        value = self.get_pixels_amount()
         _min = min(len(_pixels), value)
 
         self.set_progress_maximum(_min)
