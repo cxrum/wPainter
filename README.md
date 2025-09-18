@@ -26,6 +26,12 @@ Painter for wplace using openCV and PyQt5 for UI
 
 3. A console window will open with the following info:
 
+```
+Your program is starting...
+WARNING: Your mouse will be captured while drawing.
+Close this window to stop the program.
+```
+
 ### Using compiled realize
 
 1. Download latest realize
@@ -34,11 +40,6 @@ Painter for wplace using openCV and PyQt5 for UI
 
 3. Open it 🤓
 
-```
-Your program is starting...
-WARNING: Your mouse will be captured while drawing.
-Close this window to stop the program.
-```
 
 ## Using
 
