@@ -29,6 +29,12 @@ class Color:
             return self.r == other.r and self.g == other.g and self.b == other.b
         return False
 
+    def __str__(self):
+        return "Color({}, {}, {})".format(self.r, self.g, self.b)
+
+    def __hash__(self):
+        return hash((self.r, self.g, self.b))
+
 class PixelNode:
     def __init__(self, color: Color, xy: list[Point]):
         self.color = color

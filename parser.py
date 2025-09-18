@@ -58,7 +58,7 @@ class PixelParser:
 
 
 
-    def parse_points_for_color(self, _color: Color, tolerance = 5, rect_checking = True) -> list[Rect]:
+    def parse_points_for_color(self, _color: Color, tolerance = 0, rect_checking = True) -> list[Rect]:
         res: list[Rect] = []
 
         dst = cv.cvtColor(self.img, cv.COLOR_RGB2BGR)

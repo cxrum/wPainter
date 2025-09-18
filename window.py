@@ -5,12 +5,12 @@ from PIL import ImageGrab
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QPainter, QBrush, QColor, QIntValidator, QPen
 from PyQt5.QtWidgets import QApplication, QWidget, QSlider, QVBoxLayout, QFrame, QLabel, QPushButton, \
-    QLineEdit, QProgressBar, QHBoxLayout
+    QLineEdit, QProgressBar, QHBoxLayout, QCheckBox
 
-from main import COLOR_LIST
+from main import COLOR_LIST, PAID_COLOR_LIST
 from painter import PainterWorker
 from parser import PixelParser
-from utils import Area, PixelNode, ColorPixel
+from utils import Area, PixelNode, ColorPixel, Color
 
 OUTLINE_COLOR = Qt.red
 
@@ -98,6 +98,10 @@ class GameOverlay(QWidget):
 
         self.documentation = QLabel(doc, self.slider_container)
         self.documentation.setStyleSheet("color: black; font-size: 14px;")
+
+        self.paid_colors_checkbox = QCheckBox("Enable paid colors", self)
+        self.paid_colors_checkbox.stateChanged.connect(self.on_checkbox_state_changed)
+        self.paid_colors_checkbox.setStyleSheet("color: black; font-size: 14px;")
 
         self.start_button = QPushButton("Paint",self)
         self.start_button.clicked.connect(self.start_painter)
@@ -202,6 +206,7 @@ class GameOverlay(QWidget):
         layout.addWidget(self.analyze_button)
         layout.addWidget(self.delay_slider)
         layout.addLayout(latency_layout)
+        layout.addWidget(self.paid_colors_checkbox)
         layout.addWidget(self.start_button)
 
         layout.addWidget(self.progress_label)
@@ -224,6 +229,8 @@ class GameOverlay(QWidget):
         self.total_pixels = 0
         self.cnt = 0
 
+        self.available_colors: list[Color] = []
+
         self.set_latency(1)
 
     def update_area(self):
@@ -234,6 +241,12 @@ class GameOverlay(QWidget):
         left_y = center_y - self.h_slider_value // 2
 
         self.area = Area(self.w_slider_value, self.h_slider_value, left_x, left_y)
+
+    def on_checkbox_state_changed(self, state):
+        if self.paid_colors_checkbox.isChecked():
+            self.available_colors = COLOR_LIST + PAID_COLOR_LIST
+        else:
+            self.available_colors = COLOR_LIST
 
     def update_w_slider_value(self, value):
         self.w_slider_value = value
@@ -319,7 +332,7 @@ class GameOverlay(QWidget):
         img = screenshot()
         open_cv_image = numpy.array(img)
         parser = PixelParser(open_cv_image, self.area)
-        _pixels = parser.matrix_points_parse(COLOR_LIST, True)
+        _pixels = parser.matrix_points_parse(self.available_colors, True)
         value = self.get_pixels_amount()
         _min = min(len(_pixels), value)
 
