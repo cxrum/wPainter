@@ -9,16 +9,23 @@ Painter for wplace using openCV and PyQt5 for UI
 ---
 
 ## Installation & Setup
-
+### Using source code
 1. Clone this repository
 
 2. Make sure Python 3.10+ is installed and added to your PATH.
+3. Double click start.bat
+
+### Using compiled realize
+
+1. Download latest realize
+
+2. Unpack it
+
+3. Open it
 
 ---
 
-## Starting the Program
-
-### Using the Batch Script 
+## Starting the Program (only for source code)
 
 1. Double-click 🤓 start.bat 
 
@@ -32,10 +39,12 @@ WARNING: Your mouse will be captured while drawing.
 Close this window to stop the program.
 ```
 
+
 ## Using
 
-1. Select the work area size by sliders
-2. Enter the available amount of pixels
-3. Press "Start paint" button
+1. Select the size of the working area using the sliders
+2. Enter the available number of pixels
+3. You can check the box to use paid colors
+4. Click the "Paint" button
 
 You can stop the painting prrocces by pressing the **R** key 🫣
