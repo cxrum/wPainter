@@ -229,7 +229,7 @@ class GameOverlay(QWidget):
         self.total_pixels = 0
         self.cnt = 0
 
-        self.available_colors: list[Color] = []
+        self.available_colors: list[Color] = COLOR_LIST
 
         self.set_latency(1)
 
